@@ -24,6 +24,7 @@ var defaultConfig = &struct {
 type Config struct {
 	Network NetworkConfig `json:network`
 	Files   []FileConfig  `json:files`
+	Kafka   KafkaConfig   `json:"kafka"`
 }
 
 type NetworkConfig struct {
@@ -66,7 +67,15 @@ func DiscoverConfigs(file_or_directory string) (files []string, err error) {
 // if a value would be overwritten by the merge.
 func MergeConfig(to *Config, from Config) (err error) {
 
+	to.Kafka.AckTimeoutMS = from.Kafka.AckTimeoutMS
+	to.Kafka.BrokerList = append(to.Kafka.BrokerList, from.Kafka.BrokerList...)
+	to.Kafka.CompressionCodec = from.Kafka.CompressionCodec
+	to.Kafka.FlushFrequencyMS = from.Kafka.FlushFrequencyMS
+	to.Kafka.RequiredAcks = from.Kafka.RequiredAcks
+	to.Kafka.TopicID = from.Kafka.TopicID
+
 	to.Network.Servers = append(to.Network.Servers, from.Network.Servers...)
+
 	to.Files = append(to.Files, from.Files...)
 
 	// TODO: Is there a better way to do this in Go?

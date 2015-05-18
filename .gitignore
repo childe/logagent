@@ -27,3 +27,4 @@ logstash-forwarder
 *.key
 *.json
 *.lock
+*.exe

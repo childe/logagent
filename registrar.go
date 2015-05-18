@@ -1,13 +1,13 @@
 package main
 
 import (
-	"os"
 	"encoding/json"
+	"os"
 )
 
 func Registrar(state map[string]*FileState, input chan []*FileEvent) {
 	for events := range input {
-		emit ("Registrar: processing %d events\n", len(events))
+		emit("Registrar: processing %d events\n", len(events))
 		// Take the last event found for each file source
 		for _, event := range events {
 			// skip stdin
@@ -36,16 +36,14 @@ func Registrar(state map[string]*FileState, input chan []*FileEvent) {
 }
 
 func writeRegistry(state map[string]*FileState, path string) error {
-	tempfile := path + ".new"
-	file, e := os.Create(tempfile)
-	if e != nil {
-		emit("Failed to create tempfile (%s) for writing: %s\n", tempfile, e)
-		return e
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_SYNC, 0666)
+	if err != nil {
+		emit("Failed to open state file (%s) for writing: %s\n", path, err)
+		return err
 	}
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
 	encoder.Encode(state)
-
-	return onRegistryWrite(path, tempfile)
+	return nil
 }
