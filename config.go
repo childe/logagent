@@ -37,10 +37,15 @@ type NetworkConfig struct {
 }
 
 type FileConfig struct {
-	Paths    []string          `json:paths`
-	Fields   map[string]string `json:fields`
-	DeadTime string            `json:"dead time"`
-	deadtime time.Duration
+	Paths            []string          `json:paths`
+	Fields           map[string]string `json:fields`
+	FieldNames       []string          `json:fields`
+	FieldTypes       []string          `json:fields`
+	Delimiter        string
+	QuoteChar        string
+	DeadTime         string
+	FieldNamesLength int
+	deadtime         time.Duration
 }
 
 func DiscoverConfigs(file_or_directory string) (files []string, err error) {

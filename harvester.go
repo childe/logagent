@@ -77,12 +77,17 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 
 		line++
 		event := &FileEvent{
-			Source:   &h.Path,
-			Offset:   h.Offset,
-			Line:     line,
-			Text:     text,
-			Fields:   &h.FileConfig.Fields,
-			fileinfo: &info,
+			Source:           &h.Path,
+			Offset:           h.Offset,
+			Line:             line,
+			Text:             text,
+			Fields:           &h.FileConfig.Fields,
+			FieldNames:       h.FileConfig.FieldNames,
+			FieldTypes:       h.FileConfig.FieldTypes,
+			Delimiter:        h.FileConfig.Delimiter,
+			QuoteChar:        h.FileConfig.QuoteChar,
+			FieldNamesLength: h.FileConfig.FieldNamesLength,
+			fileinfo:         &info,
 		}
 		h.Offset += int64(bytesread)
 
