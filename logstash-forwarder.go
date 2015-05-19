@@ -134,6 +134,9 @@ func main() {
 		if err == nil {
 			err = MergeConfig(&config, additional_config)
 		}
+		if err == nil {
+			err = SplitConf(&config)
+		}
 		if err != nil {
 			fault("Could not load config file %s: %s", filename, err)
 		}
