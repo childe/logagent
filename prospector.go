@@ -158,7 +158,8 @@ func (p *Prospector) scan(path string, output chan *FileEvent, resume *Prospecto
 				} else {
 					emit("Launching harvester on new file: %s\n", file)
 
-					if p.FileConfig.HarvestFromBeginningOnNewFile == false {
+					if resume != nil && p.FileConfig.HarvestFromBeginningOnNewFile == false {
+						// although it's a new file, but we are in the first quick resume scan on start up.
 						// seek to end of the file and harvest from this point on.
 						offset = fileinfo.Size()
 					}
