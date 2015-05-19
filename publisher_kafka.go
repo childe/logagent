@@ -101,27 +101,41 @@ func PublishKafka(input chan []*FileEvent,
 	for events := range input {
 		for _, event := range events {
 			splited := event.DelimiterRegexp.Split(*event.Text, -1)
+			fmt.Println(splited)
 
 			var msg string
+			var jsonFields []string
 			if len(splited) != event.FieldNamesLength {
-				msg = "{\"message\":\"" + *event.Text + "\"}"
+				jsonFields = make([]string, len(*event.Fields)+2)
+				jsonFields[0] = "\"message\":\"" + *event.Text + "\""
+				//msg = "{\"message\":\"" + *event.Text + "\"}"
 			} else {
-				jsonFields := make([]string, event.FieldNamesLength)
+				jsonFields = make([]string, event.FieldNamesLength+len(*event.Fields)+1)
 				for idx, fieldname := range event.FieldNames {
 					//fmt.Println(idx, fieldname)
 					jsonFields[idx] = "\"" + fieldname + "\"" + ":" + event.FieldTypes[idx] + strings.Trim(splited[idx], event.QuoteChar) + event.FieldTypes[idx]
 				}
-				msg = "{" + strings.Join(jsonFields, ",") + "}"
 			}
 
-			entry := &iisLogEntry{
-				Line: msg,
+			// dump Fields into json string
+			i := 0
+			for k, v := range *event.Fields {
+				jsonFields[i+event.FieldNamesLength] = "\"" + k + "\":\"" + v + "\""
+				i++
 			}
-			producer.Input() <- &sarama.ProducerMessage{
-				Topic: kconf.TopicID,
-				Key:   sarama.StringEncoder(""),
-				Value: entry,
-			}
+
+			msg = "{" + strings.Join(jsonFields, ",") + "}"
+
+			fmt.Println(msg)
+
+			//entry := &iisLogEntry{
+			//Line: msg,
+			//}
+			//producer.Input() <- &sarama.ProducerMessage{
+			//Topic: kconf.TopicID,
+			//Key:   sarama.StringEncoder(""),
+			//Value: entry,
+			//}
 		}
 
 		// Tell the registrar that we've successfully sent these events
