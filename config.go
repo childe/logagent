@@ -47,6 +47,8 @@ type FileConfig struct {
 	DeadTime         string
 	FieldNamesLength int
 	deadtime         time.Duration
+
+	HarvestFromBeginningOnNewFile bool
 }
 
 func DiscoverConfigs(file_or_directory string) (files []string, err error) {
