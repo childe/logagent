@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/Shopify/sarama"
 	"log"
-	"regexp"
 	"strings"
 	"time"
 )
@@ -101,8 +100,7 @@ func PublishKafka(input chan []*FileEvent,
 
 	for events := range input {
 		for _, event := range events {
-			//splited := Regexp.Split(*event.Text, event.Delimiter)
-			splited := regexp.MustCompile(event.Delimiter).Split(*event.Text, -1)
+			splited := event.DelimiterRegexp.Split(*event.Text, -1)
 
 			var msg string
 			if len(splited) != event.FieldNamesLength {

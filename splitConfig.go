@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 )
 
 func SplitConf(config *Config) (err error) {
@@ -9,6 +10,8 @@ func SplitConf(config *Config) (err error) {
 		if len(config.Files[idx].FieldNames) != len(config.Files[idx].FieldTypes) {
 			return fmt.Errorf("FieldNames length does not match that of FieldTypes")
 		}
+
+		config.Files[idx].DelimiterRegexp = regexp.MustCompile(config.Files[idx].Delimiter)
 
 		config.Files[idx].FieldNamesLength = len(config.Files[idx].FieldNames)
 

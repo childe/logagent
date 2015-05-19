@@ -42,6 +42,7 @@ type FileConfig struct {
 	FieldNames       []string          `json:fields`
 	FieldTypes       []string          `json:fields`
 	Delimiter        string
+	DelimiterRegexp  *regexp.Regexp
 	QuoteChar        string
 	DeadTime         string
 	FieldNamesLength int

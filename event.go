@@ -1,6 +1,9 @@
 package main
 
-import "os"
+import (
+	"os"
+	"regexp"
+)
 
 type FileEvent struct {
 	Source           *string `json:"source,omitempty"`
@@ -10,7 +13,7 @@ type FileEvent struct {
 	Fields           *map[string]string
 	FieldNames       []string `json:fields`
 	FieldTypes       []string `json:fields`
-	Delimiter        string
+	DelimiterRegexp  *regexp.Regexp
 	QuoteChar        string
 	FieldNamesLength int
 
