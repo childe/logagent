@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Shopify/sarama"
 	"log"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -100,7 +101,8 @@ func PublishKafka(input chan []*FileEvent,
 
 	for events := range input {
 		for _, event := range events {
-			splited := strings.Split(*event.Text, event.Delimiter)
+			//splited := Regexp.Split(*event.Text, event.Delimiter)
+			splited := regexp.MustCompile(event.Delimiter).Split(*event.Text, -1)
 
 			var msg string
 			if len(splited) != event.FieldNamesLength {
@@ -109,7 +111,7 @@ func PublishKafka(input chan []*FileEvent,
 				jsonFields := make([]string, event.FieldNamesLength)
 				for idx, fieldname := range event.FieldNames {
 					//fmt.Println(idx, fieldname)
-					jsonFields[idx] = "\"" + fieldname + "\"" + ":" + strings.Trim(event.FieldTypes[idx], event.QuoteChar) + splited[idx] + event.FieldTypes[idx]
+					jsonFields[idx] = "\"" + fieldname + "\"" + ":" + event.FieldTypes[idx] + strings.Trim(splited[idx], event.QuoteChar) + event.FieldTypes[idx]
 				}
 				msg = "{" + strings.Join(jsonFields, ",") + "}"
 			}
