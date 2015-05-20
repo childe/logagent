@@ -210,6 +210,7 @@ func main() {
 
 	// go Publishv1(publisher_chan, registrar_chan, &config.Network)
 	go PublishKafka(publisher_chan, registrar_chan, &config.Kafka)
+	defer CloseProducer()
 
 	// registrar records last acknowledged positions in all files.
 	Registrar(persist, registrar_chan)

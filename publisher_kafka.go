@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/Shopify/sarama"
 	"log"
 	"strings"
@@ -15,13 +14,30 @@ type KafkaConfig struct {
 	AckTimeoutMS     int      `json:"ack_timeout_ms"`     // milliseconds
 	RequiredAcks     string   `json:"required_acks"`      // no_response, wait_for_local, wait_for_all
 	FlushFrequencyMS int      `json:"flush_frequency_ms"` // milliseconds
+	WriteTimeout     string   `json:"write_timeout"`      // string, 100ms, 1s, default 1s
+	DailTimeout      string   `json:"dail_timeout"`       // string, 100ms, 1s, default 5s
+	KeepAlive        string   `json:"keepalive"`          // string, 100ms, 1s, 0 to disable it. default 30s
 }
 
-func newProducer(kconf *KafkaConfig) sarama.AsyncProducer {
+func MustParseInterval(interval string, dft time.Duration) time.Duration {
+	if interval == "" {
+		return dft
+	}
 
-	fmt.Printf("kafka config: %+v\n", kconf)
+	d, err := time.ParseDuration(interval)
+	if d <= 0 || err != nil {
+		return dft
+	}
+	return d
+}
 
+func newProducer(kconf *KafkaConfig) sarama.SyncProducer {
 	config := sarama.NewConfig()
+
+	config.Net.DialTimeout = MustParseInterval(kconf.DailTimeout, time.Second*5)
+	config.Net.WriteTimeout = MustParseInterval(kconf.WriteTimeout, time.Second*1)
+	config.Net.ReadTimeout = time.Second * 10
+	config.Net.KeepAlive = MustParseInterval(kconf.KeepAlive, time.Second*30)
 
 	cc := strings.ToLower(kconf.CompressionCodec)
 	switch {
@@ -50,17 +66,15 @@ func newProducer(kconf *KafkaConfig) sarama.AsyncProducer {
 	config.Producer.Timeout = time.Millisecond * time.Duration(kconf.AckTimeoutMS)
 	config.Producer.Flush.Frequency = time.Millisecond * time.Duration(kconf.FlushFrequencyMS)
 
-	producer, err := sarama.NewAsyncProducer(kconf.BrokerList, config)
+	log.Printf("kconf: %+v", config)
+
+	producer, err := sarama.NewSyncProducer(kconf.BrokerList, config)
 	if err != nil {
-		log.Fatalln("Failed to start Sarama producer:", err)
+		log.Println("failed to start producer:", err, kconf.BrokerList)
+		return nil
 	}
 
-	go func() {
-		for err := range producer.Errors() {
-			log.Println("Failed to write access log entry:", err)
-		}
-	}()
-
+	log.Println("created new producer: ", kconf.BrokerList)
 	return producer
 }
 
@@ -91,40 +105,68 @@ func (ile *iisLogEntry) Encode() ([]byte, error) {
 	return ile.encoded, ile.err
 }
 
+var (
+	producer sarama.SyncProducer
+)
+
+func get_producer(kconf *KafkaConfig) sarama.SyncProducer {
+	if producer == nil {
+		producer = newProducer(kconf)
+	}
+	return producer
+}
+
+func CloseProducer() {
+	if producer != nil {
+		producer.Close()
+	}
+}
+
 func PublishKafka(input chan []*FileEvent,
 	registrar chan []*FileEvent,
 	kconf *KafkaConfig) {
 
-	producer := newProducer(kconf)
-	defer producer.Close()
-
 	for events := range input {
-		for _, event := range events {
-			splited := event.DelimiterRegexp.Split(*event.Text, -1)
 
-			var msg string
-			if len(splited) != event.FieldNamesLength {
-				msg = "{\"message\":\"" + *event.Text + "\"}"
-			} else {
-				jsonFields := make([]string, event.FieldNamesLength)
-				for idx, fieldname := range event.FieldNames {
-					//fmt.Println(idx, fieldname)
-					jsonFields[idx] = "\"" + fieldname + "\"" + ":" + event.FieldTypes[idx] + strings.Trim(splited[idx], event.QuoteChar) + event.FieldTypes[idx]
+		p := get_producer(kconf)
+		if p == nil {
+			log.Println("no producer, events cnt: ", len(events))
+			// un-acked FileEvent will be consumed later again.
+		} else {
+			msg := ""
+			for _, event := range events {
+				splited := event.DelimiterRegexp.Split(*event.Text, -1)
+
+				if len(splited) != event.FieldNamesLength {
+					msg += "{\"message\":\"" + *event.Text + "\"}\n"
+				} else {
+					jsonFields := make([]string, event.FieldNamesLength)
+					for idx, fieldname := range event.FieldNames {
+						//fmt.Println(idx, fieldname)
+						jsonFields[idx] = "\"" + fieldname + "\"" + ":" + event.FieldTypes[idx] + strings.Trim(splited[idx], event.QuoteChar) + event.FieldTypes[idx]
+					}
+					msg += "{" + strings.Join(jsonFields, ",") + "}\n"
 				}
-				msg = "{" + strings.Join(jsonFields, ",") + "}"
 			}
 
 			entry := &iisLogEntry{
 				Line: msg,
 			}
-			producer.Input() <- &sarama.ProducerMessage{
+
+			_, _, err := p.SendMessage(&sarama.ProducerMessage{
 				Topic: kconf.TopicID,
 				Key:   sarama.StringEncoder(""),
 				Value: entry,
-			}
-		}
+			})
 
-		// Tell the registrar that we've successfully sent these events
-		registrar <- events
-	}
+			//FIXME: data may lost if remote kafka cluster down a little while. coz unacked events
+			// will not re-sent before the next ack. and ack only changes Offset of last success..
+			if err == nil {
+				// Tell the registrar that we've successfully sent these events
+				registrar <- events
+			} else {
+				p = nil // if error happens, we nil producer, force it to reconnect
+			}
+		} // p == nil
+	} // for events := range input
 }
