@@ -146,6 +146,15 @@ func PublishKafka(input chan []*FileEvent,
 						jsonFields[idx] = "\"" + fieldname + "\"" + ":" + event.FieldTypes[idx] + strings.Trim(splited[idx], event.QuoteChar) + event.FieldTypes[idx]
 					}
 					msg += "{" + strings.Join(jsonFields, ",") + "}\n"
+
+					//// dump Fields into json string
+					//for k, v := range *event.Fields {
+					//jsonFields[idx] = "\"" + k + "\":\"" + v + "\""
+					//i++
+					//}
+
+					//jsonFields[idx] = "\"path\":\"" + *event.Source + "\""
+					//msg = "{" + strings.Join(jsonFields, ",") + "}"
 				}
 			}
 
