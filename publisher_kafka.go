@@ -133,33 +133,39 @@ func PublishKafka(input chan []*FileEvent,
 			log.Println("no producer, events cnt: ", len(events))
 			// un-acked FileEvent will be consumed later again.
 		} else {
-			msg := ""
+			msgs := ""
 			for _, event := range events {
 				splited := event.DelimiterRegexp.Split(*event.Text, -1)
-
+				msg := ""
+				var jsonFields []string
+				i := 0
 				if len(splited) != event.FieldNamesLength {
-					msg += "{\"message\":\"" + *event.Text + "\"}\n"
+					jsonFields = make([]string, len(*event.Fields)+2)
+					jsonFields[0] = "\"message\":\"" + *event.Text + "\""
+					i++
 				} else {
-					jsonFields := make([]string, event.FieldNamesLength)
+					jsonFields = make([]string, event.FieldNamesLength+len(*event.Fields)+1)
 					for idx, fieldname := range event.FieldNames {
-						//fmt.Println(idx, fieldname)
+						i++
 						jsonFields[idx] = "\"" + fieldname + "\"" + ":" + event.FieldTypes[idx] + strings.Trim(splited[idx], event.QuoteChar) + event.FieldTypes[idx]
 					}
-					msg += "{" + strings.Join(jsonFields, ",") + "}\n"
-
-					//// dump Fields into json string
-					//for k, v := range *event.Fields {
-					//jsonFields[idx] = "\"" + k + "\":\"" + v + "\""
-					//i++
-					//}
-
-					//jsonFields[idx] = "\"path\":\"" + *event.Source + "\""
-					//msg = "{" + strings.Join(jsonFields, ",") + "}"
 				}
+
+				// dump Fields into json string
+				for k, v := range *event.Fields {
+					jsonFields[i] = "\"" + k + "\":\"" + v + "\""
+					i++
+				}
+
+				jsonFields[i] = "\"path\":\"" + *event.Source + "\""
+
+				msg = "{" + strings.Join(jsonFields, ",") + "}"
+
+				msgs += msg + "\n"
 			}
 
 			entry := &iisLogEntry{
-				Line: msg,
+				Line: msgs,
 			}
 
 			_, _, err := p.SendMessage(&sarama.ProducerMessage{
