@@ -146,14 +146,14 @@ func PublishKafka(input chan []*FileEvent,
 			for _, event := range events {
 				msg := ""
 
-				splited := event.DelimiterRegexp.Split(*event.Text, -1)
+				splited := event.DelimiterRegexp.Split(strings.TrimSpace(*event.Text), -1)
 				var jsonFields []string
 				i := 0
 				if len(splited) != event.FieldNamesLength {
-					jsonFields = make([]string, event.FieldNamesLength+len(*event.Fields)+2)
+					jsonFields = make([]string, event.FieldNamesLength+len(*event.Fields)+1)
 					jsonFields[i] = "{\"message\":\"" + *event.Text + "\"}"
 				} else {
-					jsonFields = make([]string, event.FieldNamesLength+len(*event.Fields)+1)
+					jsonFields = make([]string, event.FieldNamesLength+len(*event.Fields))
 
 					for idx, fieldname := range event.FieldNames {
 						jsonFields[i] = "\"" + fieldname + "\"" + ":" + event.FieldTypes[idx] + strings.Trim(splited[idx], event.QuoteChar) + event.FieldTypes[idx]
@@ -167,7 +167,7 @@ func PublishKafka(input chan []*FileEvent,
 					i++
 				}
 
-				jsonFields[i] = "\"path\":\"" + *event.Source + "\""
+				//jsonFields[i] = "\"path\":\"" + *event.Source + "\""
 
 				msg = "{" + strings.Join(jsonFields, ",") + "}"
 
