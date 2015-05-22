@@ -180,17 +180,17 @@ func PublishKafka(input chan []*FileEvent,
 					Key:   sarama.StringEncoder(""),
 					Value: entry,
 				}
+			}
 
-				//FIXME: data may lost if remote kafka cluster down a little while. coz unacked events
-				// will not re-sent before the next ack. and ack only changes Offset of last success..
-				// if err == nil {
-				// 	// Tell the registrar that we've successfully sent these events
-				// 	registrar <- events
-				// } else {
-				// 	p = nil // if error happens, we nil producer, force it to reconnect
-				// }
-				registrar <- events
-			} // p == nil
-		} // for events := range input
-	}
+			//FIXME: data may lost if remote kafka cluster down a little while. coz unacked events
+			// will not re-sent before the next ack. and ack only changes Offset of last success..
+			// if err == nil {
+			// 	// Tell the registrar that we've successfully sent these events
+			// 	registrar <- events
+			// } else {
+			// 	p = nil // if error happens, we nil producer, force it to reconnect
+			// }
+			registrar <- events
+		} // p == nil
+	} // for events := range input
 }
