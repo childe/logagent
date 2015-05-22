@@ -31,7 +31,7 @@ func MustParseInterval(interval string, dft time.Duration) time.Duration {
 	return d
 }
 
-func newProducer(kconf *KafkaConfig) sarama.SyncProducer {
+func newProducer(kconf *KafkaConfig) sarama.AsyncProducer {
 	config := sarama.NewConfig()
 
 	config.Net.DialTimeout = MustParseInterval(kconf.DailTimeout, time.Second*5)
@@ -65,14 +65,23 @@ func newProducer(kconf *KafkaConfig) sarama.SyncProducer {
 
 	config.Producer.Timeout = time.Millisecond * time.Duration(kconf.AckTimeoutMS)
 	config.Producer.Flush.Frequency = time.Millisecond * time.Duration(kconf.FlushFrequencyMS)
+	// config.Producer.Retry.Backoff = time.Second * 10
+	// config.Producer.Retry.Max = 100
 
 	log.Printf("kconf: %+v", config)
 
-	producer, err := sarama.NewSyncProducer(kconf.BrokerList, config)
+	producer, err := sarama.NewAsyncProducer(kconf.BrokerList, config)
 	if err != nil {
 		log.Println("failed to start producer:", err, kconf.BrokerList)
 		return nil
 	}
+
+	go func() {
+		log.Println("consuming from producer.Errors()")
+		for err := range producer.Errors() {
+			log.Println(err)
+		}
+	}()
 
 	log.Println("created new producer: ", kconf.BrokerList)
 	return producer
@@ -106,10 +115,10 @@ func (ile *iisLogEntry) Encode() ([]byte, error) {
 }
 
 var (
-	producer sarama.SyncProducer
+	producer sarama.AsyncProducer
 )
 
-func get_producer(kconf *KafkaConfig) sarama.SyncProducer {
+func get_producer(kconf *KafkaConfig) sarama.AsyncProducer {
 	if producer == nil {
 		producer = newProducer(kconf)
 	}
@@ -133,21 +142,22 @@ func PublishKafka(input chan []*FileEvent,
 			log.Println("no producer, events cnt: ", len(events))
 			// un-acked FileEvent will be consumed later again.
 		} else {
-			msgs := ""
+
 			for _, event := range events {
-				splited := event.DelimiterRegexp.Split(*event.Text, -1)
 				msg := ""
+
+				splited := event.DelimiterRegexp.Split(*event.Text, -1)
 				var jsonFields []string
 				i := 0
 				if len(splited) != event.FieldNamesLength {
-					jsonFields = make([]string, len(*event.Fields)+2)
-					jsonFields[0] = "\"message\":\"" + *event.Text + "\""
-					i++
+					jsonFields = make([]string, event.FieldNamesLength+len(*event.Fields)+2)
+					jsonFields[i] = "{\"message\":\"" + *event.Text + "\"}"
 				} else {
 					jsonFields = make([]string, event.FieldNamesLength+len(*event.Fields)+1)
+
 					for idx, fieldname := range event.FieldNames {
+						jsonFields[i] = "\"" + fieldname + "\"" + ":" + event.FieldTypes[idx] + strings.Trim(splited[idx], event.QuoteChar) + event.FieldTypes[idx]
 						i++
-						jsonFields[idx] = "\"" + fieldname + "\"" + ":" + event.FieldTypes[idx] + strings.Trim(splited[idx], event.QuoteChar) + event.FieldTypes[idx]
 					}
 				}
 
@@ -161,27 +171,26 @@ func PublishKafka(input chan []*FileEvent,
 
 				msg = "{" + strings.Join(jsonFields, ",") + "}"
 
-				msgs += msg + "\n"
-			}
+				entry := &iisLogEntry{
+					Line: msg,
+				}
 
-			entry := &iisLogEntry{
-				Line: msgs,
-			}
+				p.Input() <- &sarama.ProducerMessage{
+					Topic: kconf.TopicID,
+					Key:   sarama.StringEncoder(""),
+					Value: entry,
+				}
 
-			_, _, err := p.SendMessage(&sarama.ProducerMessage{
-				Topic: kconf.TopicID,
-				Key:   sarama.StringEncoder(""),
-				Value: entry,
-			})
-
-			//FIXME: data may lost if remote kafka cluster down a little while. coz unacked events
-			// will not re-sent before the next ack. and ack only changes Offset of last success..
-			if err == nil {
-				// Tell the registrar that we've successfully sent these events
+				//FIXME: data may lost if remote kafka cluster down a little while. coz unacked events
+				// will not re-sent before the next ack. and ack only changes Offset of last success..
+				// if err == nil {
+				// 	// Tell the registrar that we've successfully sent these events
+				// 	registrar <- events
+				// } else {
+				// 	p = nil // if error happens, we nil producer, force it to reconnect
+				// }
 				registrar <- events
-			} else {
-				p = nil // if error happens, we nil producer, force it to reconnect
-			}
-		} // p == nil
-	} // for events := range input
+			} // p == nil
+		} // for events := range input
+	}
 }
