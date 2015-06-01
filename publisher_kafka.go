@@ -37,7 +37,7 @@ func newProducer(kconf *KafkaConfig) sarama.AsyncProducer {
 	config.Net.DialTimeout = MustParseInterval(kconf.DailTimeout, time.Second*5)
 	config.Net.WriteTimeout = MustParseInterval(kconf.WriteTimeout, time.Second*1)
 	config.Net.ReadTimeout = time.Second * 10
-	config.Net.KeepAlive = MustParseInterval(kconf.KeepAlive, time.Second*30)
+	config.Net.KeepAlive = MustParseInterval(kconf.KeepAlive, time.Second*30*60)
 
 	cc := strings.ToLower(kconf.CompressionCodec)
 	switch {
