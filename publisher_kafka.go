@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/Shopify/sarama"
 	"log"
 	"strings"
@@ -16,7 +17,7 @@ type KafkaConfig struct {
 	FlushFrequencyMS int      `json:"flush_frequency_ms"` // milliseconds
 	WriteTimeout     string   `json:"write_timeout"`      // string, 100ms, 1s, default 1s
 	DailTimeout      string   `json:"dail_timeout"`       // string, 100ms, 1s, default 5s
-	KeepAlive        string   `json:"keepalive"`          // string, 100ms, 1s, 0 to disable it. default 30s
+	KeepAlive        string   `json:"keepalive"`          // string, 100ms, 1s, 0 to disable it. default 30m
 }
 
 func MustParseInterval(interval string, dft time.Duration) time.Duration {
@@ -38,6 +39,7 @@ func newProducer(kconf *KafkaConfig) sarama.AsyncProducer {
 	config.Net.WriteTimeout = MustParseInterval(kconf.WriteTimeout, time.Second*1)
 	config.Net.ReadTimeout = time.Second * 10
 	config.Net.KeepAlive = MustParseInterval(kconf.KeepAlive, time.Second*30*60)
+	fmt.Println(config.Net.KeepAlive)
 
 	cc := strings.ToLower(kconf.CompressionCodec)
 	switch {
