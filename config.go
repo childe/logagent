@@ -81,6 +81,7 @@ func MergeConfig(to *Config, from Config) (err error) {
 	to.Kafka.FlushFrequencyMS = from.Kafka.FlushFrequencyMS
 	to.Kafka.RequiredAcks = from.Kafka.RequiredAcks
 	to.Kafka.TopicID = from.Kafka.TopicID
+	to.Kafka.KeepAlive = from.Kafka.KeepAlive
 
 	to.Network.Servers = append(to.Network.Servers, from.Network.Servers...)
 
