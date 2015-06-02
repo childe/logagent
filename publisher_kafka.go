@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/Shopify/sarama"
 	"log"
 	"strings"
@@ -39,7 +38,6 @@ func newProducer(kconf *KafkaConfig) sarama.AsyncProducer {
 	config.Net.WriteTimeout = MustParseInterval(kconf.WriteTimeout, time.Second*1)
 	config.Net.ReadTimeout = time.Second * 10
 	config.Net.KeepAlive = MustParseInterval(kconf.KeepAlive, time.Second*30*60)
-	fmt.Println(config.Net.KeepAlive)
 
 	cc := strings.ToLower(kconf.CompressionCodec)
 	switch {
