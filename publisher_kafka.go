@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/Shopify/sarama"
 	"log"
 	"strings"
@@ -164,6 +165,7 @@ func PublishKafka(input chan []*FileEvent,
 				//logEvent['path'] = *event.Source
 
 				msg, _ := json.Marshal(logEvent)
+				fmt.Println(string(msg[:]))
 
 				entry := &iisLogEntry{
 					Line: string(msg[:]),

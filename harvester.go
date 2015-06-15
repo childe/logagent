@@ -83,7 +83,6 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 			Text:             text,
 			Fields:           &h.FileConfig.Fields,
 			FieldNames:       h.FileConfig.FieldNames,
-			FieldTypes:       h.FileConfig.FieldTypes,
 			DelimiterRegexp:  h.FileConfig.DelimiterRegexp,
 			QuoteChar:        h.FileConfig.QuoteChar,
 			FieldNamesLength: h.FileConfig.FieldNamesLength,

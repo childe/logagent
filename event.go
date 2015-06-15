@@ -11,8 +11,7 @@ type FileEvent struct {
 	Line             uint64  `json:"line,omitempty"`
 	Text             *string `json:"text,omitempty"`
 	Fields           *map[string]string
-	FieldNames       []string `json:fields`
-	FieldTypes       []string `json:fields`
+	FieldNames       []string `json:fieldnames`
 	DelimiterRegexp  *regexp.Regexp
 	QuoteChar        string
 	FieldNamesLength int

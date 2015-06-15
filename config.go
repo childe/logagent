@@ -39,8 +39,7 @@ type NetworkConfig struct {
 type FileConfig struct {
 	Paths            []string          `json:paths`
 	Fields           map[string]string `json:fields`
-	FieldNames       []string          `json:fields`
-	FieldTypes       []string          `json:fields`
+	FieldNames       []string          `json:fieldnames`
 	Delimiter        string
 	DelimiterRegexp  *regexp.Regexp
 	QuoteChar        string
