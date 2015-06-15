@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/Shopify/sarama"
 	"log"
 	"strings"
@@ -144,35 +145,28 @@ func PublishKafka(input chan []*FileEvent,
 		} else {
 
 			for _, event := range events {
-				msg := ""
+				logEvent := map[string]string{}
 
 				splited := event.DelimiterRegexp.Split(strings.TrimSpace(*event.Text), -1)
-				var jsonFields []string
-				i := 0
 				if len(splited) != event.FieldNamesLength {
-					jsonFields = make([]string, event.FieldNamesLength+len(*event.Fields)+1)
-					jsonFields[i] = "{\"message\":\"" + *event.Text + "\"}"
+					logEvent["message"] = *event.Text
 				} else {
-					jsonFields = make([]string, event.FieldNamesLength+len(*event.Fields))
-
 					for idx, fieldname := range event.FieldNames {
-						jsonFields[i] = "\"" + fieldname + "\"" + ":" + event.FieldTypes[idx] + strings.Trim(splited[idx], event.QuoteChar) + event.FieldTypes[idx]
-						i++
+						logEvent[fieldname] = strings.Trim(splited[idx], event.QuoteChar)
 					}
 				}
 
 				// dump Fields into json string
 				for k, v := range *event.Fields {
-					jsonFields[i] = "\"" + k + "\":\"" + v + "\""
-					i++
+					logEvent[k] = v
 				}
 
-				//jsonFields[i] = "\"path\":\"" + *event.Source + "\""
+				//logEvent['path'] = *event.Source
 
-				msg = "{" + strings.Join(jsonFields, ",") + "}"
+				msg, _ := json.Marshal(logEvent)
 
 				entry := &iisLogEntry{
-					Line: msg,
+					Line: string(msg[:]),
 				}
 
 				p.Input() <- &sarama.ProducerMessage{
