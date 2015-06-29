@@ -173,7 +173,7 @@ func PublishKafka(input chan []*FileEvent,
 
 				p.Input() <- &sarama.ProducerMessage{
 					Topic: kconf.TopicID,
-					Key:   sarama.StringEncoder(""),
+					Key:   nil,
 					Value: entry,
 				}
 			}
