@@ -7,7 +7,7 @@
 #
 
 
-hash=$(git rev-parse HEAD)
+hash=$(git rev-parse --short HEAD)
 
 go build . && tar -czf dist/logstash-forwarder-$hash.tgz ./logstash-forwarder.exe && echo "done"
 
