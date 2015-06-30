@@ -35,7 +35,6 @@ func JsonFormat1(event *FileEvent) string {
 //this is copied from https://github.com/golang/go/blob/f9ed2f75c43cb8745a1593ec3e4208c46419216a/src/encoding/json/encode.go
 type encodeState struct {
 	bytes.Buffer // accumulated output
-	scratch      [64]byte
 }
 
 var hex = "0123456789abcdef"
@@ -123,7 +122,7 @@ func JsonFormat2(event *FileEvent) string {
 
 	splited := event.DelimiterRegexp.Split(strings.TrimSpace(*event.Text), -1)
 	if len(splited) != event.FieldNamesLength {
-		e.string("message")
+		e.WriteString("message")
 		e.WriteByte(':')
 		e.string(*event.Text)
 	} else {
@@ -131,7 +130,7 @@ func JsonFormat2(event *FileEvent) string {
 			if idx != 0 {
 				e.WriteByte(',')
 			}
-			e.string(fieldname)
+			e.WriteString(fieldname)
 			e.WriteByte(':')
 			e.string(strings.Trim(splited[idx], event.QuoteChar))
 		}
@@ -140,9 +139,9 @@ func JsonFormat2(event *FileEvent) string {
 	// dump Fields into json string
 	for k, v := range *event.Fields {
 		e.WriteByte(',')
-		e.string(k)
+		e.WriteString(k)
 		e.WriteByte(':')
-		e.string(v)
+		e.WriteString(v)
 	}
 
 	//logEvent['path'] = *event.Source
