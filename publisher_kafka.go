@@ -1,8 +1,6 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
 	"github.com/Shopify/sarama"
 	"log"
 	"strings"
@@ -146,29 +144,11 @@ func PublishKafka(input chan []*FileEvent,
 		} else {
 
 			for _, event := range events {
-				logEvent := map[string]string{}
 
-				splited := event.DelimiterRegexp.Split(strings.TrimSpace(*event.Text), -1)
-				if len(splited) != event.FieldNamesLength {
-					logEvent["message"] = *event.Text
-				} else {
-					for idx, fieldname := range event.FieldNames {
-						logEvent[fieldname] = strings.Trim(splited[idx], event.QuoteChar)
-					}
-				}
-
-				// dump Fields into json string
-				for k, v := range *event.Fields {
-					logEvent[k] = v
-				}
-
-				//logEvent['path'] = *event.Source
-
-				msg, _ := json.Marshal(logEvent)
-				fmt.Println(string(msg[:]))
+				msg := JsonFormat(event)
 
 				entry := &iisLogEntry{
-					Line: string(msg[:]),
+					Line: string(msg),
 				}
 
 				p.Input() <- &sarama.ProducerMessage{
