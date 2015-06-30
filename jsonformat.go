@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"unicode/utf8"
 )
@@ -29,7 +28,6 @@ func JsonFormat1(event *FileEvent) string {
 	//logEvent['path'] = *event.Source
 
 	msg, _ := json.Marshal(logEvent)
-	fmt.Println(string(msg[:]))
 
 	return string(msg)
 }
@@ -152,7 +150,6 @@ func JsonFormat2(event *FileEvent) string {
 	e.WriteByte('}')
 
 	msg := string(e.Bytes())
-	fmt.Println(msg)
 
 	return msg
 }
