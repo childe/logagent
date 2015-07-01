@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"unicode/utf8"
 )
@@ -122,7 +123,7 @@ func JsonFormat2(event *FileEvent) string {
 
 	splited := event.DelimiterRegexp.Split(strings.TrimSpace(*event.Text), -1)
 	if len(splited) != event.FieldNamesLength {
-		e.WriteString("message")
+		e.WriteString("\"message\"")
 		e.WriteByte(':')
 		e.string(*event.Text)
 	} else {
@@ -130,7 +131,7 @@ func JsonFormat2(event *FileEvent) string {
 			if idx != 0 {
 				e.WriteByte(',')
 			}
-			e.WriteString(fieldname)
+			e.WriteString("\"" + fieldname + "\"")
 			e.WriteByte(':')
 			e.string(strings.Trim(splited[idx], event.QuoteChar))
 		}
@@ -139,9 +140,9 @@ func JsonFormat2(event *FileEvent) string {
 	// dump Fields into json string
 	for k, v := range *event.Fields {
 		e.WriteByte(',')
-		e.WriteString(k)
+		e.WriteString("\"" + k + "\"")
 		e.WriteByte(':')
-		e.WriteString(v)
+		e.WriteString("\"" + v + "\"")
 	}
 
 	//logEvent['path'] = *event.Source
