@@ -11,12 +11,16 @@ import (
 func JsonFormat1(event *FileEvent) string {
 	logEvent := map[string]string{}
 
-	splited := event.DelimiterRegexp.Split(strings.TrimSpace(*event.Text), -1)
-	if len(splited) != event.FieldNamesLength {
+	if len(event.FieldNames) == 0 {
 		logEvent["message"] = *event.Text
 	} else {
-		for idx, fieldname := range event.FieldNames {
-			logEvent[fieldname] = strings.Trim(splited[idx], event.QuoteChar)
+		splited := event.DelimiterRegexp.Split(strings.TrimSpace(*event.Text), -1)
+		if len(splited) != event.FieldNamesLength {
+			logEvent["message"] = *event.Text
+		} else {
+			for idx, fieldname := range event.FieldNames {
+				logEvent[fieldname] = strings.Trim(splited[idx], event.QuoteChar)
+			}
 		}
 	}
 
@@ -25,7 +29,7 @@ func JsonFormat1(event *FileEvent) string {
 		logEvent[k] = v
 	}
 
-	//logEvent['path'] = *event.Source
+	logEvent["path"] = *event.Source
 
 	msg, _ := json.Marshal(logEvent)
 
@@ -120,19 +124,25 @@ func JsonFormat2(event *FileEvent) string {
 
 	e.WriteByte('{')
 
-	splited := event.DelimiterRegexp.Split(strings.TrimSpace(*event.Text), -1)
-	if len(splited) != event.FieldNamesLength {
+	if len(event.FieldNames) == 0 {
 		e.WriteString("\"message\"")
 		e.WriteByte(':')
 		e.string(*event.Text)
 	} else {
-		for idx, fieldname := range event.FieldNames {
-			if idx != 0 {
-				e.WriteByte(',')
-			}
-			e.WriteString("\"" + fieldname + "\"")
+		splited := event.DelimiterRegexp.Split(strings.TrimSpace(*event.Text), -1)
+		if len(splited) != event.FieldNamesLength {
+			e.WriteString("\"message\"")
 			e.WriteByte(':')
-			e.string(strings.Trim(splited[idx], event.QuoteChar))
+			e.string(*event.Text)
+		} else {
+			for idx, fieldname := range event.FieldNames {
+				if idx != 0 {
+					e.WriteByte(',')
+				}
+				e.WriteString("\"" + fieldname + "\"")
+				e.WriteByte(':')
+				e.string(strings.Trim(splited[idx], event.QuoteChar))
+			}
 		}
 	}
 
@@ -143,8 +153,6 @@ func JsonFormat2(event *FileEvent) string {
 		e.WriteByte(':')
 		e.WriteString("\"" + v + "\"")
 	}
-
-	//logEvent['path'] = *event.Source
 
 	e.WriteByte('}')
 
