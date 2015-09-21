@@ -1,22 +1,25 @@
 package main
 
 import (
+	"bytes"
 	"github.com/Shopify/sarama"
 	"log"
 	"strings"
+	"text/template"
 	"time"
 )
 
 type KafkaConfig struct {
-	BrokerList       []string `json:"broker_list"`        // ["localhost:xxx", "remote:xxx"]
-	TopicID          string   `json:"topic_id"`           //
-	CompressionCodec string   `json:"compression_codec"`  // none, gzip or snappy
-	AckTimeoutMS     int      `json:"ack_timeout_ms"`     // milliseconds
-	RequiredAcks     string   `json:"required_acks"`      // no_response, wait_for_local, wait_for_all
-	FlushFrequencyMS int      `json:"flush_frequency_ms"` // milliseconds
-	WriteTimeout     string   `json:"write_timeout"`      // string, 100ms, 1s, default 1s
-	DailTimeout      string   `json:"dail_timeout"`       // string, 100ms, 1s, default 5s
-	KeepAlive        string   `json:"keepalive"`          // string, 100ms, 1s, 0 to disable it. default 30m
+	BrokerList       []string `json:"broker_list"` // ["localhost:xxx", "remote:xxx"]
+	TopicID          string   `json:"topic_id"`    //
+	TopicIDTemplate  *template.Template
+	CompressionCodec string `json:"compression_codec"`  // none, gzip or snappy
+	AckTimeoutMS     int    `json:"ack_timeout_ms"`     // milliseconds
+	RequiredAcks     string `json:"required_acks"`      // no_response, wait_for_local, wait_for_all
+	FlushFrequencyMS int    `json:"flush_frequency_ms"` // milliseconds
+	WriteTimeout     string `json:"write_timeout"`      // string, 100ms, 1s, default 1s
+	DailTimeout      string `json:"dail_timeout"`       // string, 100ms, 1s, default 5s
+	KeepAlive        string `json:"keepalive"`          // string, 100ms, 1s, 0 to disable it. default 30m
 }
 
 func MustParseInterval(interval string, dft time.Duration) time.Duration {
@@ -151,8 +154,14 @@ func PublishKafka(input chan []*FileEvent,
 					Line: string(msg),
 				}
 
+				buf := &bytes.Buffer{}
+				if err := kconf.TopicIDTemplate.Execute(buf, event.Fields); err != nil {
+					panic(err)
+				}
+				topic := buf.String()
+
 				p.Input() <- &sarama.ProducerMessage{
-					Topic: kconf.TopicID,
+					Topic: topic,
 					Key:   nil,
 					Value: entry,
 				}

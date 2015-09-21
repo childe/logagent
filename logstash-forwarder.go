@@ -181,6 +181,7 @@ func main() {
 
 	// Prospect the globs/paths given on the command line and launch harvesters
 	for _, fileconfig := range config.Files {
+		fmt.Println(fileconfig.FieldNames)
 		prospector := &Prospector{FileConfig: fileconfig}
 		go prospector.Prospect(restart, event_chan)
 		pendingProspectorCnt++
