@@ -130,11 +130,7 @@ func JsonFormat2(event *FileEvent) string {
 		e.string(*event.Text)
 	} else {
 		splited := event.DelimiterRegexp.Split(strings.TrimSpace(*event.Text), -1)
-		if len(splited) != event.FieldNamesLength {
-			e.WriteString("\"message\"")
-			e.WriteByte(':')
-			e.string(*event.Text)
-		} else {
+		if len(splited) == event.FieldNamesLength {
 			for idx, fieldname := range event.FieldNames {
 				if idx != 0 {
 					e.WriteByte(',')
@@ -142,6 +138,18 @@ func JsonFormat2(event *FileEvent) string {
 				e.WriteString("\"" + fieldname + "\"")
 				e.WriteByte(':')
 				e.string(strings.Trim(splited[idx], event.QuoteChar))
+			}
+		} else {
+			e.WriteString("\"message\"")
+			e.WriteByte(':')
+			e.string(*event.Text)
+			if event.ExactMatch == false && len(splited) > event.FieldNamesLength {
+				for idx, fieldname := range event.FieldNames {
+					e.WriteByte(',')
+					e.WriteString("\"" + fieldname + "\"")
+					e.WriteByte(':')
+					e.string(strings.Trim(splited[idx], event.QuoteChar))
+				}
 			}
 		}
 	}

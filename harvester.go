@@ -84,6 +84,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 			Fields:           &h.FileConfig.Fields,
 			FieldNames:       h.FileConfig.FieldNames,
 			DelimiterRegexp:  h.FileConfig.DelimiterRegexp,
+			ExactMatch:       h.FileConfig.ExactMatch,
 			QuoteChar:        h.FileConfig.QuoteChar,
 			FieldNamesLength: h.FileConfig.FieldNamesLength,
 			fileinfo:         &info,

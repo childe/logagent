@@ -41,6 +41,7 @@ type FileConfig struct {
 	Paths            []string          `json:paths`
 	Fields           map[string]string `json:fields`
 	FieldNames       []string          `json:fieldnames`
+	ExactMatch       bool
 	Delimiter        string
 	DelimiterRegexp  *regexp.Regexp
 	QuoteChar        string

@@ -13,6 +13,7 @@ type FileEvent struct {
 	Fields           *map[string]string
 	FieldNames       []string `json:fieldnames`
 	DelimiterRegexp  *regexp.Regexp
+	ExactMatch       bool
 	QuoteChar        string
 	FieldNamesLength int
 
