@@ -80,9 +80,8 @@ func newProducer(kconf *KafkaConfig) sarama.AsyncProducer {
 	}
 
 	go func() {
-		log.Println("consuming from producer.Errors()")
 		for err := range producer.Errors() {
-			log.Println(err)
+			log.Println("produce error: ", err)
 		}
 	}()
 
@@ -143,11 +142,8 @@ func PublishKafka(input chan []*FileEvent,
 		p := get_producer(kconf)
 		if p == nil {
 			log.Println("no producer, events cnt: ", len(events))
-			// un-acked FileEvent will be consumed later again.
 		} else {
-
 			for _, event := range events {
-
 				msg := JsonFormat(event)
 
 				entry := &iisLogEntry{
