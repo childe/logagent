@@ -1,7 +1,8 @@
 package main
 
 import (
-	"bytes"
+	//"bytes"
+	"fmt"
 	"github.com/Shopify/sarama"
 	"log"
 	"strings"
@@ -122,6 +123,7 @@ var (
 )
 
 func get_producer(kconf *KafkaConfig) sarama.AsyncProducer {
+	return nil
 	if producer == nil {
 		producer = newProducer(kconf)
 	}
@@ -141,7 +143,7 @@ func PublishKafka(input chan []*FileEvent,
 	for events := range input {
 
 		p := get_producer(kconf)
-		if p == nil {
+		if p != nil {
 			log.Println("no producer, events cnt: ", len(events))
 			// un-acked FileEvent will be consumed later again.
 		} else {
@@ -149,22 +151,23 @@ func PublishKafka(input chan []*FileEvent,
 			for _, event := range events {
 
 				msg := JsonFormat(event)
+				fmt.Println(msg)
 
-				entry := &iisLogEntry{
-					Line: string(msg),
-				}
+				//entry := &iisLogEntry{
+				//Line: string(msg),
+				//}
 
-				buf := &bytes.Buffer{}
-				if err := kconf.TopicIDTemplate.Execute(buf, event.Fields); err != nil {
-					panic(err)
-				}
-				topic := buf.String()
+				//buf := &bytes.Buffer{}
+				//if err := kconf.TopicIDTemplate.Execute(buf, event.Fields); err != nil {
+				//panic(err)
+				//}
+				//topic := buf.String()
 
-				p.Input() <- &sarama.ProducerMessage{
-					Topic: topic,
-					Key:   nil,
-					Value: entry,
-				}
+				//p.Input() <- &sarama.ProducerMessage{
+				//Topic: topic,
+				//Key:   nil,
+				//Value: entry,
+				//}
 			}
 
 			//FIXME: data may lost if remote kafka cluster down a little while. coz unacked events

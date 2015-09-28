@@ -45,7 +45,6 @@ var hex = "0123456789abcdef"
 
 func (e *encodeState) string(s string) (int, error) {
 	len0 := e.Len()
-	e.WriteByte('"')
 	start := 0
 	for i := 0; i < len(s); {
 		if b := s[i]; b < utf8.RuneSelf {
@@ -114,7 +113,6 @@ func (e *encodeState) string(s string) (int, error) {
 	if start < len(s) {
 		e.WriteString(s[start:])
 	}
-	e.WriteByte('"')
 	return e.Len() - len0, nil
 }
 
@@ -127,29 +125,55 @@ func JsonFormat2(event *FileEvent) string {
 	if len(event.FieldNames) == 0 {
 		e.WriteString("\"message\"")
 		e.WriteByte(':')
+		e.WriteByte('"')
 		e.string(*event.Text)
+		e.WriteByte('"')
 	} else {
 		splited := event.DelimiterRegexp.Split(strings.TrimSpace(*event.Text), -1)
 		if len(splited) == event.FieldNamesLength {
 			for idx, fieldname := range event.FieldNames {
-				if idx != 0 {
-					e.WriteByte(',')
+				if idx > 0 && fieldname == event.FieldNames[idx-1] {
+					e.string(" " + strings.Trim(splited[idx], event.QuoteChar))
+				} else {
+					if idx > 0 {
+						e.WriteByte('"')
+						e.WriteByte(',')
+					}
+					e.WriteString("\"" + fieldname + "\"")
+					e.WriteByte(':')
+					e.WriteByte('"')
+					e.string(strings.Trim(splited[idx], event.QuoteChar))
 				}
-				e.WriteString("\"" + fieldname + "\"")
-				e.WriteByte(':')
-				e.string(strings.Trim(splited[idx], event.QuoteChar))
 			}
+			e.WriteByte('"')
 		} else {
 			e.WriteString("\"message\"")
 			e.WriteByte(':')
+			e.WriteByte('"')
 			e.string(*event.Text)
+			e.WriteByte('"')
 			if event.ExactMatch == false && len(splited) > event.FieldNamesLength {
 				for idx, fieldname := range event.FieldNames {
-					e.WriteByte(',')
-					e.WriteString("\"" + fieldname + "\"")
-					e.WriteByte(':')
-					e.string(strings.Trim(splited[idx], event.QuoteChar))
+					if idx > 0 && fieldname == event.FieldNames[idx-1] {
+						e.string(" " + strings.Trim(splited[idx], event.QuoteChar))
+					} else {
+						if idx > 0 {
+							e.WriteByte('"')
+							e.WriteByte(',')
+						}
+						e.WriteString("\"" + fieldname + "\"")
+						e.WriteByte(':')
+						e.WriteByte('"')
+						e.string(strings.Trim(splited[idx], event.QuoteChar))
+					}
 				}
+				e.WriteByte('"')
+				//for idx, fieldname := range event.FieldNames {
+				//e.WriteByte(',')
+				//e.WriteString("\"" + fieldname + "\"")
+				//e.WriteByte(':')
+				//e.string(strings.Trim(splited[idx], event.QuoteChar))
+				//}
 			}
 		}
 	}
