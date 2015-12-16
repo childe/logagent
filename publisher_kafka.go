@@ -1,8 +1,6 @@
 package main
 
 import (
-	//"bytes"
-	"fmt"
 	"github.com/Shopify/sarama"
 	"log"
 	"strings"
@@ -144,29 +142,9 @@ func PublishKafka(input chan []*FileEvent,
 		p := get_producer(kconf)
 		if p == nil {
 			log.Println("no producer, events cnt: ", len(events))
-			// un-acked FileEvent will be consumed later again.
 		} else {
-
 			for _, event := range events {
-
 				msg := JsonFormat(event)
-				fmt.Println(msg)
-
-				//entry := &iisLogEntry{
-				//Line: string(msg),
-				//}
-
-				//buf := &bytes.Buffer{}
-				//if err := kconf.TopicIDTemplate.Execute(buf, event.Fields); err != nil {
-				//panic(err)
-				//}
-				//topic := buf.String()
-
-				//p.Input() <- &sarama.ProducerMessage{
-				//Topic: topic,
-				//Key:   nil,
-				//Value: entry,
-				//}
 			}
 
 			//FIXME: data may lost if remote kafka cluster down a little while. coz unacked events
