@@ -123,7 +123,6 @@ var (
 )
 
 func get_producer(kconf *KafkaConfig) sarama.AsyncProducer {
-	return nil
 	if producer == nil {
 		producer = newProducer(kconf)
 	}
@@ -143,7 +142,7 @@ func PublishKafka(input chan []*FileEvent,
 	for events := range input {
 
 		p := get_producer(kconf)
-		if p != nil {
+		if p == nil {
 			log.Println("no producer, events cnt: ", len(events))
 			// un-acked FileEvent will be consumed later again.
 		} else {
