@@ -80,9 +80,8 @@ func newProducer(kconf *KafkaConfig) sarama.AsyncProducer {
 	}
 
 	go func() {
-		log.Println("consuming from producer.Errors()")
 		for err := range producer.Errors() {
-			log.Println(err)
+			log.Println("produce error: ", err)
 		}
 	}()
 
