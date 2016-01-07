@@ -186,6 +186,11 @@ func JsonFormat2(event *FileEvent) string {
 		e.WriteString("\"" + v + "\"")
 	}
 
+	e.WriteByte(',')
+	e.WriteString("\"" + "path" + "\"")
+	e.WriteByte(':')
+	e.WriteString("\"" + *event.Source + "\"")
+
 	e.WriteByte('}')
 
 	msg := string(e.Bytes())
