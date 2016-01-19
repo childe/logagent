@@ -77,6 +77,9 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 
 		line++
 		event := &FileEvent{
+			NoHostname:       h.FileConfig.NoHostname,
+			NoTimestamp:      h.FileConfig.NoTimestamp,
+			NoPath:           h.FileConfig.NoPath,
 			Hostname:         &h.FileConfig.Hostname,
 			Source:           &h.Path,
 			Offset:           h.Offset,

@@ -49,6 +49,9 @@ type FileConfig struct {
 	FieldNamesLength int
 	deadtime         time.Duration
 	Hostname         string
+	NoHostname       bool
+	NoPath           bool
+	NoTimestamp      bool
 
 	HarvestFromBeginningOnNewFile bool
 }

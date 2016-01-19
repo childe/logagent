@@ -17,6 +17,9 @@ type FileEvent struct {
 	QuoteChar        string
 	FieldNamesLength int
 	Hostname         *string
+	NoHostname       bool
+	NoPath           bool
+	NoTimestamp      bool
 
 	ileinfo  *os.FileInfo
 	fileinfo *os.FileInfo
