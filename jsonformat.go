@@ -203,7 +203,7 @@ func JsonFormat2(event *FileEvent) string {
 	e.WriteByte(',')
 	e.WriteString("\"timestamp\"")
 	e.WriteByte(':')
-	e.WriteString("\"" + strconv.FormatInt(time.Now().UnixNano()/1000000, 10) + "\"")
+	e.WriteString(strconv.FormatInt(time.Now().UnixNano()/1000000, 10))
 
 	e.WriteByte('}')
 
