@@ -88,6 +88,13 @@ func MergeConfig(to *Config, from Config) (err error) {
 	to.Kafka.TopicID = from.Kafka.TopicID
 	to.Kafka.TopicIDTemplate = template.Must(template.New("topic").Parse(from.Kafka.TopicID))
 	to.Kafka.KeepAlive = from.Kafka.KeepAlive
+	to.Kafka.RefreshFrequency = from.Kafka.RefreshFrequency
+	to.Kafka.Key = from.Kafka.Key
+	if from.Kafka.Key != nil {
+		to.Kafka.KeyTemplate = template.Must(template.New("key").Parse(*from.Kafka.Key))
+	} else {
+		to.Kafka.KeyTemplate = nil
+	}
 
 	to.Network.Servers = append(to.Network.Servers, from.Network.Servers...)
 
@@ -122,6 +129,9 @@ func MergeConfig(to *Config, from Config) (err error) {
 }
 
 func LoadConfig(path string) (config Config, err error) {
+	config.Kafka.RefreshFrequency = 600000
+	config.Kafka.Key = nil
+
 	config_file, err := os.Open(path)
 	if err != nil {
 		emit("Failed to open config file '%s': %s\n", path, err)

@@ -13,13 +13,16 @@ type KafkaConfig struct {
 	BrokerList       []string `json:"broker_list"` // ["localhost:xxx", "remote:xxx"]
 	TopicID          string   `json:"topic_id"`    //
 	TopicIDTemplate  *template.Template
-	CompressionCodec string `json:"compression_codec"`  // none, gzip or snappy
-	AckTimeoutMS     int    `json:"ack_timeout_ms"`     // milliseconds
-	RequiredAcks     string `json:"required_acks"`      // no_response, wait_for_local, wait_for_all
-	FlushFrequencyMS int    `json:"flush_frequency_ms"` // milliseconds
-	WriteTimeout     string `json:"write_timeout"`      // string, 100ms, 1s, default 1s
-	DailTimeout      string `json:"dail_timeout"`       // string, 100ms, 1s, default 5s
-	KeepAlive        string `json:"keepalive"`          // string, 100ms, 1s, 0 to disable it. default 30m
+	CompressionCodec string  `json:"compression_codec"`  // none, gzip or snappy
+	AckTimeoutMS     int     `json:"ack_timeout_ms"`     // milliseconds
+	RequiredAcks     string  `json:"required_acks"`      // no_response, wait_for_local, wait_for_all
+	FlushFrequencyMS int     `json:"flush_frequency_ms"` // milliseconds
+	WriteTimeout     string  `json:"write_timeout"`      // string, 100ms, 1s, default 1s
+	DailTimeout      string  `json:"dail_timeout"`       // string, 100ms, 1s, default 5s
+	KeepAlive        string  `json:"keepalive"`          // string, 100ms, 1s, 0 to disable it. default 30m
+	RefreshFrequency int     `json:"refresh_frequency"`  // milliseconds
+	Key              *string `json:"key"`
+	KeyTemplate      *template.Template
 }
 
 func MustParseInterval(interval string, dft time.Duration) time.Duration {
@@ -68,10 +71,7 @@ func newProducer(kconf *KafkaConfig) sarama.AsyncProducer {
 
 	config.Producer.Timeout = time.Millisecond * time.Duration(kconf.AckTimeoutMS)
 	config.Producer.Flush.Frequency = time.Millisecond * time.Duration(kconf.FlushFrequencyMS)
-	// config.Producer.Retry.Backoff = time.Second * 10
-	// config.Producer.Retry.Max = 100
-
-	log.Printf("kconf: %+v", config)
+	config.Metadata.RefreshFrequency = time.Millisecond * time.Duration(kconf.RefreshFrequency)
 
 	producer, err := sarama.NewAsyncProducer(kconf.BrokerList, config)
 	if err != nil {
@@ -116,6 +116,33 @@ func (ile *iisLogEntry) Encode() ([]byte, error) {
 	return ile.encoded, ile.err
 }
 
+type iisLogKey struct {
+	Line string
+
+	encoded []byte
+	err     error
+}
+
+func (ile *iisLogKey) encode() []byte {
+	return []byte(ile.Line)
+}
+
+func (ile *iisLogKey) ensureEncoded() {
+	if ile.encoded == nil && ile.err == nil {
+		ile.encoded = ile.encode()
+	}
+}
+
+func (ile *iisLogKey) Length() int {
+	ile.ensureEncoded()
+	return len(ile.encoded)
+}
+
+func (ile *iisLogKey) Encode() ([]byte, error) {
+	ile.ensureEncoded()
+	return ile.encoded, ile.err
+}
+
 var (
 	producer sarama.AsyncProducer
 )
@@ -156,10 +183,26 @@ func PublishKafka(input chan []*FileEvent,
 				}
 				topic := buf.String()
 
-				p.Input() <- &sarama.ProducerMessage{
-					Topic: topic,
-					Key:   nil,
-					Value: entry,
+				if kconf.KeyTemplate == nil {
+					p.Input() <- &sarama.ProducerMessage{
+						Topic: topic,
+						Key:   nil,
+						Value: entry,
+					}
+				} else {
+					buf := &bytes.Buffer{}
+					if err := kconf.KeyTemplate.Execute(buf, event.Fields); err != nil {
+						panic(err)
+					}
+					key := &iisLogKey{
+						Line: buf.String(),
+					}
+
+					p.Input() <- &sarama.ProducerMessage{
+						Topic: topic,
+						Key:   key,
+						Value: entry,
+					}
 				}
 			}
 
