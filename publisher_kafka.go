@@ -191,7 +191,7 @@ func PublishKafka(input chan []*FileEvent,
 					}
 				} else {
 					buf := &bytes.Buffer{}
-					if err := kconf.KeyTemplate.Execute(buf, event.Fields); err != nil {
+					if err := kconf.KeyTemplate.Execute(buf, event); err != nil {
 						panic(err)
 					}
 					key := &iisLogKey{
