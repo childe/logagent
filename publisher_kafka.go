@@ -2,11 +2,12 @@ package main
 
 import (
 	"bytes"
-	"github.com/Shopify/sarama"
 	"log"
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/Shopify/sarama"
 )
 
 type KafkaConfig struct {
