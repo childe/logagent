@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -22,25 +21,24 @@ var defaultConfig = &struct {
 	fileDeadtime: "24h",
 }
 
+// Config is parsed from a json file, including files and kakfa config
 type Config struct {
-	Network NetworkConfig `json:network`
-	Files   []FileConfig  `json:files`
-	Kafka   KafkaConfig   `json:"kafka"`
+	Files []FileConfig `json:"files"`
+	Kafka KafkaConfig  `json:"kafka"`
 }
 
-type NetworkConfig struct {
-	Servers        []string `json:servers`
-	SSLCertificate string   `json:"ssl certificate"`
-	SSLKey         string   `json:"ssl key"`
-	SSLCA          string   `json:"ssl ca"`
-	Timeout        int64    `json:timeout`
-	timeout        time.Duration
-}
-
+// FileConfig :
+// Paths: list of paths
+// Fields: a dict, add this dict to the whole event
+// FieldNames: split the message to FieldsNames
+// ExactMatch: if set it to false, "error errormsg abcd xyz" could be splited to
+// logleve and logmessage. if set to true, could not splitted, because
+//splited parts do not match.
+// TODO
 type FileConfig struct {
-	Paths            []string          `json:paths`
-	Fields           map[string]string `json:fields`
-	FieldNames       []string          `json:fieldnames`
+	Paths            []string          `json:"paths"`
+	Fields           map[string]string `json:"fields"`
+	FieldNames       []string          `json:"fieldnames"`
 	ExactMatch       bool
 	Delimiter        string
 	DelimiterRegexp  *regexp.Regexp
@@ -52,27 +50,28 @@ type FileConfig struct {
 	HarvestFromBeginningOnNewFile bool
 }
 
-func DiscoverConfigs(file_or_directory string) (files []string, err error) {
-	fi, err := os.Stat(file_or_directory)
+// DiscoverConfigs parse config from config file
+func DiscoverConfigs(fileOrDirectory string) (files []string, err error) {
+	fi, err := os.Stat(fileOrDirectory)
 	if err != nil {
 		return nil, err
 	}
 	files = make([]string, 0)
 	if fi.IsDir() {
-		entries, err := ioutil.ReadDir(file_or_directory)
+		entries, err := ioutil.ReadDir(fileOrDirectory)
 		if err != nil {
 			return nil, err
 		}
 		for _, filename := range entries {
-			files = append(files, path.Join(file_or_directory, filename.Name()))
+			files = append(files, path.Join(fileOrDirectory, filename.Name()))
 		}
 	} else {
-		files = append(files, file_or_directory)
+		files = append(files, fileOrDirectory)
 	}
 	return files, nil
 }
 
-// Append values to the 'to' config from the 'from' config, erroring
+// MergeConfig Append values to the 'to' config from the 'from' config, erroring
 // if a value would be overwritten by the merge.
 func MergeConfig(to *Config, from Config) (err error) {
 
@@ -85,46 +84,20 @@ func MergeConfig(to *Config, from Config) (err error) {
 	to.Kafka.TopicIDTemplate = template.Must(template.New("topic").Parse(from.Kafka.TopicID))
 	to.Kafka.KeepAlive = from.Kafka.KeepAlive
 
-	to.Network.Servers = append(to.Network.Servers, from.Network.Servers...)
-
 	to.Files = append(to.Files, from.Files...)
 
-	// TODO: Is there a better way to do this in Go?
-	if from.Network.SSLCertificate != "" {
-		if to.Network.SSLCertificate != "" {
-			return fmt.Errorf("SSLCertificate already defined as '%s' in previous config file", to.Network.SSLCertificate)
-		}
-		to.Network.SSLCertificate = from.Network.SSLCertificate
-	}
-	if from.Network.SSLKey != "" {
-		if to.Network.SSLKey != "" {
-			return fmt.Errorf("SSLKey already defined as '%s' in previous config file", to.Network.SSLKey)
-		}
-		to.Network.SSLKey = from.Network.SSLKey
-	}
-	if from.Network.SSLCA != "" {
-		if to.Network.SSLCA != "" {
-			return fmt.Errorf("SSLCA already defined as '%s' in previous config file", to.Network.SSLCA)
-		}
-		to.Network.SSLCA = from.Network.SSLCA
-	}
-	if from.Network.Timeout != 0 {
-		if to.Network.Timeout != 0 {
-			return fmt.Errorf("Timeout already defined as '%d' in previous config file", to.Network.Timeout)
-		}
-		to.Network.Timeout = from.Network.Timeout
-	}
 	return nil
 }
 
+// LoadConfig load config from config file
 func LoadConfig(path string) (config Config, err error) {
-	config_file, err := os.Open(path)
+	configFile, err := os.Open(path)
 	if err != nil {
 		emit("Failed to open config file '%s': %s\n", path, err)
 		return
 	}
 
-	fi, _ := config_file.Stat()
+	fi, _ := configFile.Stat()
 	if size := fi.Size(); size > (configFileSizeLimit) {
 		emit("config file (%q) size exceeds reasonable limit (%d) - aborting", path, size)
 		return // REVU: shouldn't this return an error, then?
@@ -136,7 +109,7 @@ func LoadConfig(path string) (config Config, err error) {
 	}
 
 	buffer := make([]byte, fi.Size())
-	_, err = config_file.Read(buffer)
+	_, err = configFile.Read(buffer)
 	emit("%s\n", buffer)
 
 	buffer, err = StripComments(buffer)
@@ -165,12 +138,8 @@ func LoadConfig(path string) (config Config, err error) {
 	return
 }
 
+// FinalizeConfig set default config
 func FinalizeConfig(config *Config) {
-	if config.Network.Timeout == 0 {
-		config.Network.Timeout = defaultConfig.netTimeout
-	}
-
-	config.Network.timeout = time.Duration(config.Network.Timeout) * time.Second
 }
 
 func StripComments(data []byte) ([]byte, error) {
