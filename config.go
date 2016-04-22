@@ -105,7 +105,7 @@ func LoadConfig(path string) (config Config, err error) {
 	config.Kafka.RefreshFrequency = 600000
 	config.Kafka.Key = nil
 
-	config_file, err := os.Open(path)
+	configFile, err := os.Open(path)
 	if err != nil {
 		emit("Failed to open config file '%s': %s\n", path, err)
 		return
