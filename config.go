@@ -47,6 +47,9 @@ type FileConfig struct {
 	FieldNamesLength int
 	deadtime         time.Duration
 	Hostname         string
+	NoHostname       bool
+	NoPath           bool
+	NoTimestamp      bool
 
 	HarvestFromBeginningOnNewFile bool
 }
@@ -84,6 +87,13 @@ func MergeConfig(to *Config, from Config) (err error) {
 	to.Kafka.TopicID = from.Kafka.TopicID
 	to.Kafka.TopicIDTemplate = template.Must(template.New("topic").Parse(from.Kafka.TopicID))
 	to.Kafka.KeepAlive = from.Kafka.KeepAlive
+	to.Kafka.RefreshFrequency = from.Kafka.RefreshFrequency
+	to.Kafka.Key = from.Kafka.Key
+	if from.Kafka.Key != nil {
+		to.Kafka.KeyTemplate = template.Must(template.New("key").Parse(*from.Kafka.Key))
+	} else {
+		to.Kafka.KeyTemplate = nil
+	}
 
 	to.Files = append(to.Files, from.Files...)
 
@@ -92,7 +102,10 @@ func MergeConfig(to *Config, from Config) (err error) {
 
 // LoadConfig load config from config file
 func LoadConfig(path string) (config Config, err error) {
-	configFile, err := os.Open(path)
+	config.Kafka.RefreshFrequency = 600000
+	config.Kafka.Key = nil
+
+	config_file, err := os.Open(path)
 	if err != nil {
 		emit("Failed to open config file '%s': %s\n", path, err)
 		return

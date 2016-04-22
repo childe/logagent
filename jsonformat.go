@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -186,15 +188,28 @@ func JsonFormat2(event *FileEvent) string {
 		e.WriteString("\"" + v + "\"")
 	}
 
-	e.WriteByte(',')
-	e.WriteString("\"" + "hostname" + "\"")
-	e.WriteByte(':')
-	e.WriteString("\"" + *event.Hostname + "\"")
+	if event.NoHostname == false {
+		e.WriteByte(',')
+		e.WriteString("\"hostname\"")
+		e.WriteByte(':')
+		e.WriteString("\"" + *event.Hostname + "\"")
+	}
 
-	e.WriteByte(',')
-	e.WriteString("\"" + "path" + "\"")
-	e.WriteByte(':')
-	e.WriteString("\"" + *event.Source + "\"")
+	if event.NoPath == false {
+		e.WriteByte(',')
+		e.WriteString("\"path\"")
+		e.WriteByte(':')
+		e.WriteByte('"')
+		e.string(*event.Source)
+		e.WriteByte('"')
+	}
+
+	if event.NoTimestamp == false {
+		e.WriteByte(',')
+		e.WriteString("\"timestamp\"")
+		e.WriteByte(':')
+		e.WriteString(strconv.FormatInt(time.Now().UnixNano()/1000000, 10))
+	}
 
 	e.WriteByte('}')
 
