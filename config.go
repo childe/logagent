@@ -124,7 +124,7 @@ func LoadConfig(path string) (config Config, err error) {
 		return
 	}
 
-	for k, _ := range config.Files {
+	for k := range config.Files {
 		if config.Files[k].DeadTime == "" {
 			config.Files[k].DeadTime = defaultConfig.fileDeadtime
 		}
@@ -142,10 +142,11 @@ func LoadConfig(path string) (config Config, err error) {
 func FinalizeConfig(config *Config) {
 }
 
+// StripComments remove comments from json config file
 func StripComments(data []byte) ([]byte, error) {
 	data = bytes.Replace(data, []byte("\r"), []byte(""), 0) // Windows
 	lines := bytes.Split(data, []byte("\n"))
-	filtered := make([][]byte, 0)
+	var filtered [][]byte
 
 	for _, line := range lines {
 		match, err := regexp.Match(`^\s*#`, line)
