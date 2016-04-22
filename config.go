@@ -46,6 +46,7 @@ type FileConfig struct {
 	DeadTime         string
 	FieldNamesLength int
 	deadtime         time.Duration
+	Hostname         string
 
 	HarvestFromBeginningOnNewFile bool
 }
@@ -132,6 +133,12 @@ func LoadConfig(path string) (config Config, err error) {
 		if err != nil {
 			emit("Failed to parse dead time duration '%s'. Error was: %s\n", config.Files[k].DeadTime, err)
 			return
+		}
+		hostname, err := os.Hostname()
+		if err == nil {
+			config.Files[k].Hostname = hostname
+		} else {
+			emit("Failed to get hostname")
 		}
 	}
 

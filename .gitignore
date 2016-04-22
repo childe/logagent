@@ -29,3 +29,6 @@ logstash-forwarder
 *.lock
 *.exe
 dist
+logstash-forwarder-kafka
+logs/
+test/

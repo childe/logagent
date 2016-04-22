@@ -16,6 +16,7 @@ type FileEvent struct {
 	ExactMatch       bool
 	QuoteChar        string
 	FieldNamesLength int
+	Hostname         *string
 
 	ileinfo  *os.FileInfo
 	fileinfo *os.FileInfo
