@@ -6,14 +6,16 @@ import (
 	"fmt"
 	"io"
 	"os" // for File and friends
+	"strings"
 	"time"
 )
 
 type Harvester struct {
-	Path       string /* the file path to harvest */
-	FileConfig FileConfig
-	Offset     int64
-	FinishChan chan int64
+	Path            string /* the file path to harvest */
+	FileConfig      FileConfig
+	Offset          int64
+	FinishChan      chan int64
+	mergedBytesread int
 
 	file *os.File /* the file being watched */
 }
@@ -30,6 +32,9 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 	defer func() { h.FinishChan <- h.Offset }()
 
 	var line uint64 = 0 // Ask registrar about the line number
+
+	multilineBuf := make([]string, h.FileConfig.Multiline.MaxLine)
+	multilineBufIndex := 0
 
 	// get current offset in file
 	offset, _ := h.file.Seek(0, os.SEEK_CUR)
@@ -51,6 +56,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 	last_read_time := time.Now()
 	for {
 		text, bytesread, err := h.readline(reader, buffer, read_timeout)
+		h.mergedBytesread += bytesread
 
 		if err != nil {
 			if err == io.EOF {
@@ -76,26 +82,49 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 		last_read_time = time.Now()
 
 		line++
-		event := &FileEvent{
-			NoHostname:       h.FileConfig.NoHostname,
-			NoTimestamp:      h.FileConfig.NoTimestamp,
-			NoPath:           h.FileConfig.NoPath,
-			Hostname:         &h.FileConfig.Hostname,
-			Source:           &h.Path,
-			Offset:           h.Offset,
-			Line:             line,
-			Text:             text,
-			Fields:           &h.FileConfig.Fields,
-			FieldNames:       h.FileConfig.FieldNames,
-			DelimiterRegexp:  h.FileConfig.DelimiterRegexp,
-			ExactMatch:       h.FileConfig.ExactMatch,
-			QuoteChar:        h.FileConfig.QuoteChar,
-			FieldNamesLength: h.FileConfig.FieldNamesLength,
-			fileinfo:         &info,
-		}
-		h.Offset += int64(bytesread)
 
-		output <- event // ship the new event downstream
+		if h.FileConfig.Multiline != nil {
+			match := h.FileConfig.Multiline.MatchRegexp.MatchString(*text)
+			if match {
+				if h.FileConfig.Multiline.Leader == true {
+					if multilineBufIndex > 0 {
+						h.sendEvent(multilineBuf, multilineBufIndex, output, &info, line)
+
+						multilineBuf[0] = *text
+						multilineBufIndex = 1
+					} else { // new leader
+						multilineBuf[0] = *text
+						multilineBufIndex = 1
+					}
+				} else {
+					multilineBuf[multilineBufIndex] = *text
+					multilineBufIndex++
+					if multilineBufIndex >= h.FileConfig.Multiline.MaxLine {
+						h.sendEvent(multilineBuf, multilineBufIndex, output, &info, line)
+						multilineBufIndex = 0
+					}
+				}
+			} else { // not match
+				if h.FileConfig.Multiline.Leader == true {
+					multilineBuf[multilineBufIndex] = *text
+					multilineBufIndex++
+					if multilineBufIndex >= h.FileConfig.Multiline.MaxLine {
+						h.sendEvent(multilineBuf, multilineBufIndex, output, &info, line)
+						multilineBufIndex = 0
+					}
+				} else { // follower
+					if multilineBufIndex > 0 {
+						h.sendEvent(multilineBuf, multilineBufIndex, output, &info, line)
+
+						multilineBuf[0] = *text
+						multilineBufIndex = 1
+					} else { // new leader
+						multilineBuf[0] = *text
+						multilineBufIndex = 1
+					}
+				}
+			}
+		}
 	} /* forever */
 }
 
@@ -200,4 +229,34 @@ func mustBeRegularFile(f *os.File) {
 	if !info.Mode().IsRegular() {
 		panic(fmt.Errorf("Harvester: not a regular file:%q", info.Mode(), info.Name()))
 	}
+}
+
+// sendEvent create a new event and send it ot output channel
+func (h *Harvester) sendEvent(multilineBuf []string, multilineBufIndex int,
+	output chan *FileEvent, info *os.FileInfo, line uint64) error {
+	mergedText := strings.Join(multilineBuf[:multilineBufIndex], "\n")
+	multilineBufIndex = 0
+
+	event := &FileEvent{
+		NoHostname:       h.FileConfig.NoHostname,
+		NoTimestamp:      h.FileConfig.NoTimestamp,
+		NoPath:           h.FileConfig.NoPath,
+		Hostname:         &h.FileConfig.Hostname,
+		Source:           &h.Path,
+		Offset:           h.Offset,
+		Line:             line,
+		Text:             &mergedText,
+		Fields:           &h.FileConfig.Fields,
+		FieldNames:       h.FileConfig.FieldNames,
+		DelimiterRegexp:  h.FileConfig.DelimiterRegexp,
+		ExactMatch:       h.FileConfig.ExactMatch,
+		QuoteChar:        h.FileConfig.QuoteChar,
+		FieldNamesLength: h.FileConfig.FieldNamesLength,
+		fileinfo:         info,
+	}
+	h.Offset += int64(h.mergedBytesread)
+	h.mergedBytesread = 0
+
+	output <- event // ship the new event downstream
+	return nil
 }

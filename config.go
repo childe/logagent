@@ -36,22 +36,40 @@ type Config struct {
 //splited parts do not match.
 // TODO
 type FileConfig struct {
-	Paths            []string          `json:"paths"`
-	Fields           map[string]string `json:"fields"`
-	FieldNames       []string          `json:"fieldnames"`
-	ExactMatch       bool
-	Delimiter        string
-	DelimiterRegexp  *regexp.Regexp
-	QuoteChar        string
-	DeadTime         string
-	FieldNamesLength int
-	deadtime         time.Duration
-	Hostname         string
-	NoHostname       bool
-	NoPath           bool
-	NoTimestamp      bool
-
+	Paths                         []string          `json:"paths"`
+	Fields                        map[string]string `json:"fields"`
+	FieldNames                    []string          `json:"fieldnames"`
+	ExactMatch                    bool
+	Delimiter                     string
+	DelimiterRegexp               *regexp.Regexp
+	QuoteChar                     string
+	DeadTime                      string
+	FieldNamesLength              int
+	deadtime                      time.Duration
+	Hostname                      string
+	NoHostname                    bool
+	NoPath                        bool
+	NoTimestamp                   bool
 	HarvestFromBeginningOnNewFile bool
+	Multiline                     *MultilineConfig `json:"multiline"`
+}
+
+// MultilineConfig :
+// match: string,regexp
+// waht : string,leader or follower. "leader" must be lowercase
+// invert: bool, invert if match
+// timeout: The accumulation of multiple lines will be converted to an event when either a matching \
+// new line is seen or there has been no new data appended for this time auto_flush_interval. No default. If unset, no auto_flush
+// maxline: The accumulation of events can make logstash exit with an out of memory error if event boundaries are not correctly defined.
+// This settings make sure to flush multiline events after reaching a number of lines, it is used in combination max_bytes.
+type MultilineConfig struct {
+	Match       string        `json:"match"`
+	What        string        `json:"what"`
+	Invert      bool          `json:"invert"`
+	Timeout     time.Duration `json:"timeout"`
+	MaxLine     int           `json:"maxline"`
+	MatchRegexp *regexp.Regexp
+	Leader      bool
 }
 
 // DiscoverConfigs parse config from config file
@@ -143,6 +161,16 @@ func LoadConfig(path string) (config Config, err error) {
 			config.Files[k].DeadTime = defaultConfig.fileDeadtime
 		}
 		config.Files[k].deadtime, err = time.ParseDuration(config.Files[k].DeadTime)
+
+		if config.Files[k].Multiline != nil {
+			config.Files[k].Multiline.MatchRegexp, err = regexp.Compile(config.Files[k].Multiline.Match)
+			if err != nil {
+				emit("Could not compile '%s'. Error was: %s\n", config.Files[k].Multiline.Match, err)
+				return
+			}
+			config.Files[k].Multiline.Leader = config.Files[k].Multiline.What == "leader"
+		}
+
 		if err != nil {
 			emit("Failed to parse dead time duration '%s'. Error was: %s\n", config.Files[k].DeadTime, err)
 			return
@@ -154,7 +182,6 @@ func LoadConfig(path string) (config Config, err error) {
 			emit("Failed to get hostname")
 		}
 	}
-
 	return
 }
 
