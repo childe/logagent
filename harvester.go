@@ -33,8 +33,12 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 
 	var line uint64 = 0 // Ask registrar about the line number
 
-	multilineBuf := make([]string, h.FileConfig.Multiline.MaxLine)
-	multilineBufIndex := 0
+	var multilineBuf []string
+	var multilineBufIndex int
+	if h.FileConfig.Multiline != nil {
+		multilineBuf = make([]string, h.FileConfig.Multiline.MaxLine)
+		multilineBufIndex = 0
+	}
 
 	// get current offset in file
 	offset, _ := h.file.Seek(0, os.SEEK_CUR)
@@ -124,6 +128,27 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 					}
 				}
 			}
+		} else { // no multiline config
+			event := &FileEvent{
+				NoHostname:       h.FileConfig.NoHostname,
+				NoTimestamp:      h.FileConfig.NoTimestamp,
+				NoPath:           h.FileConfig.NoPath,
+				Hostname:         &h.FileConfig.Hostname,
+				Source:           &h.Path,
+				Offset:           h.Offset,
+				Line:             line,
+				Text:             text,
+				Fields:           &h.FileConfig.Fields,
+				FieldNames:       h.FileConfig.FieldNames,
+				DelimiterRegexp:  h.FileConfig.DelimiterRegexp,
+				ExactMatch:       h.FileConfig.ExactMatch,
+				QuoteChar:        h.FileConfig.QuoteChar,
+				FieldNamesLength: h.FileConfig.FieldNamesLength,
+				fileinfo:         &info,
+			}
+			h.Offset += int64(bytesread)
+
+			output <- event // ship the new event downstream
 		}
 	} /* forever */
 }
