@@ -1,4 +1,4 @@
-hash=$(shell git rev-parse --short HEAD)
+hash:=$(shell git rev-parse --short HEAD)
 
 default: logagent
 
