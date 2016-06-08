@@ -1,3 +1,10 @@
+从logstash-forwarder改造来的一个采集日志的agent, 原因是之前的Logstash-forwarder不支持发送数据到kafka.
+
+现在Logstash-forwarder的继承者filebeat,然后是beat, 早已实现了更多更丰富的功能. 这个也没什么用处了. 扔上来留个念想吧.
+
+以下是logstash-forwarder的ReadME.
+
+
 # logstash-forwarder
 
 ♫ I'm a lumberjack and I'm ok! I sleep when idle, then I ship logs all day! I parse your logs, I eat the JVM agent for lunch! ♫
