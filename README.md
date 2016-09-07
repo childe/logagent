@@ -2,6 +2,8 @@
 
 现在Logstash-forwarder的继承者filebeat,然后是beat, 早已实现了更多更丰富的功能. 这个也没什么用处了. 扔上来留个念想吧.
 
+配置文件参考[https://github.com/childe/logagent/blob/master/example.conf](https://github.com/childe/logagent/blob/master/example.conf)
+
 以下是logstash-forwarder的ReadME.
 
 
