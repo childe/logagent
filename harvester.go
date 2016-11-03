@@ -8,6 +8,8 @@ import (
 	"os" // for File and friends
 	"strings"
 	"time"
+
+	"golang.org/x/sys/windows"
 )
 
 type Harvester struct {
@@ -162,7 +164,7 @@ func (h *Harvester) open() *os.File {
 
 	for {
 		var err error
-		h.file, err = os.Open(h.Path)
+		h.file, err = os.OpenFile(h.Path, os.O_RDONLY|windows.FILE_SHARE_DELETE, 0)
 
 		if err != nil {
 			// retry on failure.
