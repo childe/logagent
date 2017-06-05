@@ -87,9 +87,9 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 		}
 		last_read_time = time.Now()
 
-		if shouldReturn || shouldMultiline {
+		if h.FileConfig.Multiline != nil && (shouldReturn || shouldMultiline) {
 			h.sendEvent(multilineBuf, multilineBufIndex, output, &info, line)
-		} else {
+		} else if err == nil {
 			line++
 
 			if h.FileConfig.Multiline != nil {
