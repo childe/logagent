@@ -58,6 +58,8 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 
 	var read_timeout = 10 * time.Second
 	last_read_time := time.Now()
+	var shouldReturn = false
+	var shouldMultiline = false
 	for {
 		text, bytesread, err := h.readline(reader, buffer, read_timeout)
 		h.mergedBytesread += bytesread
@@ -71,85 +73,94 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 					emit("File truncated, seeking to beginning: %s\n", h.Path)
 					h.file.Seek(0, os.SEEK_SET)
 					h.Offset = 0
+					shouldMultiline = true
 				} else if age := time.Since(last_read_time); age > h.FileConfig.deadtime {
 					// if last_read_time was more than dead time, this file is probably
 					// dead. Stop watching it.
 					emit("Stopping harvest of %s; last change was %v ago\n", h.Path, age)
-					return
+					shouldReturn = true
 				}
-				continue
 			} else {
 				emit("Unexpected state reading from %s; error: %s\n", h.Path, err)
-				return
+				shouldReturn = true
 			}
 		}
 		last_read_time = time.Now()
 
-		line++
+		if shouldReturn || shouldMultiline {
+			h.sendEvent(multilineBuf, multilineBufIndex, output, &info, line)
+		} else {
+			line++
 
-		if h.FileConfig.Multiline != nil {
-			match := h.FileConfig.Multiline.MatchRegexp.MatchString(*text)
-			if match {
-				if h.FileConfig.Multiline.Leader == true {
-					if multilineBufIndex > 0 {
-						h.sendEvent(multilineBuf, multilineBufIndex, output, &info, line)
+			if h.FileConfig.Multiline != nil {
+				match := h.FileConfig.Multiline.MatchRegexp.MatchString(*text)
+				if match {
+					if h.FileConfig.Multiline.Leader == true {
+						if multilineBufIndex > 0 {
+							h.sendEvent(multilineBuf, multilineBufIndex, output, &info, line)
 
-						multilineBuf[0] = *text
-						multilineBufIndex = 1
-					} else { // new leader
-						multilineBuf[0] = *text
-						multilineBufIndex = 1
+							multilineBuf[0] = *text
+							multilineBufIndex = 1
+						} else { // new leader
+							multilineBuf[0] = *text
+							multilineBufIndex = 1
+						}
+					} else {
+						multilineBuf[multilineBufIndex] = *text
+						multilineBufIndex++
+						if multilineBufIndex >= h.FileConfig.Multiline.MaxLine {
+							h.sendEvent(multilineBuf, multilineBufIndex, output, &info, line)
+							multilineBufIndex = 0
+						}
 					}
-				} else {
-					multilineBuf[multilineBufIndex] = *text
-					multilineBufIndex++
-					if multilineBufIndex >= h.FileConfig.Multiline.MaxLine {
-						h.sendEvent(multilineBuf, multilineBufIndex, output, &info, line)
-						multilineBufIndex = 0
+				} else { // not match
+					if h.FileConfig.Multiline.Leader == true {
+						multilineBuf[multilineBufIndex] = *text
+						multilineBufIndex++
+						if multilineBufIndex >= h.FileConfig.Multiline.MaxLine {
+							h.sendEvent(multilineBuf, multilineBufIndex, output, &info, line)
+							multilineBufIndex = 0
+						}
+					} else { // follower
+						if multilineBufIndex > 0 {
+							h.sendEvent(multilineBuf, multilineBufIndex, output, &info, line)
+
+							multilineBuf[0] = *text
+							multilineBufIndex = 1
+						} else { // new leader
+							multilineBuf[0] = *text
+							multilineBufIndex = 1
+						}
 					}
 				}
-			} else { // not match
-				if h.FileConfig.Multiline.Leader == true {
-					multilineBuf[multilineBufIndex] = *text
-					multilineBufIndex++
-					if multilineBufIndex >= h.FileConfig.Multiline.MaxLine {
-						h.sendEvent(multilineBuf, multilineBufIndex, output, &info, line)
-						multilineBufIndex = 0
-					}
-				} else { // follower
-					if multilineBufIndex > 0 {
-						h.sendEvent(multilineBuf, multilineBufIndex, output, &info, line)
-
-						multilineBuf[0] = *text
-						multilineBufIndex = 1
-					} else { // new leader
-						multilineBuf[0] = *text
-						multilineBufIndex = 1
-					}
+			} else { // no multiline config
+				event := &FileEvent{
+					NoHostname:       h.FileConfig.NoHostname,
+					NoTimestamp:      h.FileConfig.NoTimestamp,
+					NoPath:           h.FileConfig.NoPath,
+					Hostname:         &h.FileConfig.Hostname,
+					Source:           &h.Path,
+					Offset:           h.Offset,
+					Line:             line,
+					Text:             text,
+					Fields:           &h.FileConfig.Fields,
+					FieldNames:       h.FileConfig.FieldNames,
+					DelimiterRegexp:  h.FileConfig.DelimiterRegexp,
+					ExactMatch:       h.FileConfig.ExactMatch,
+					QuoteChar:        h.FileConfig.QuoteChar,
+					FieldNamesLength: h.FileConfig.FieldNamesLength,
+					fileinfo:         &info,
 				}
-			}
-		} else { // no multiline config
-			event := &FileEvent{
-				NoHostname:       h.FileConfig.NoHostname,
-				NoTimestamp:      h.FileConfig.NoTimestamp,
-				NoPath:           h.FileConfig.NoPath,
-				Hostname:         &h.FileConfig.Hostname,
-				Source:           &h.Path,
-				Offset:           h.Offset,
-				Line:             line,
-				Text:             text,
-				Fields:           &h.FileConfig.Fields,
-				FieldNames:       h.FileConfig.FieldNames,
-				DelimiterRegexp:  h.FileConfig.DelimiterRegexp,
-				ExactMatch:       h.FileConfig.ExactMatch,
-				QuoteChar:        h.FileConfig.QuoteChar,
-				FieldNamesLength: h.FileConfig.FieldNamesLength,
-				fileinfo:         &info,
-			}
-			h.Offset += int64(bytesread)
+				h.Offset += int64(bytesread)
 
-			output <- event // ship the new event downstream
+				output <- event // ship the new event downstream
+			}
 		}
+
+		if shouldReturn {
+			return
+		}
+
 	} /* forever */
 }
 
