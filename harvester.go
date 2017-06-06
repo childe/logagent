@@ -79,8 +79,6 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 					// dead. Stop watching it.
 					emit("Stopping harvest of %s; last change was %v ago\n", h.Path, age)
 					shouldReturn = true
-				} else {
-					emit("Unexpected EOF occurs reading from %s; error: %s\n", h.Path, err)
 				}
 			} else {
 				emit("Unexpected state reading from %s; error: %s\n", h.Path, err)
