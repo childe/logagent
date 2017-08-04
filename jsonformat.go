@@ -190,7 +190,7 @@ func JsonFormat2(event *FileEvent) string {
 
 	if event.NoHostname == false {
 		e.WriteByte(',')
-		e.WriteString("\"hostname\"")
+		e.WriteString("\"host\"")
 		e.WriteByte(':')
 		e.WriteString("\"" + *event.Hostname + "\"")
 	}
