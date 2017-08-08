@@ -3,7 +3,7 @@ hash:=$(shell git rev-parse --short HEAD)
 default: logagent
 
 all:
-	echo $(hash)
+	@echo $(hash)
 	mkdir -p build/$(hash)
 
 	GOOS=windows GOARCH=amd64 go build -o build/$(hash)/logagent-windows-x64-$(hash).exe
