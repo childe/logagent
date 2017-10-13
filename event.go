@@ -20,6 +20,7 @@ type FileEvent struct {
 	NoHostname       bool
 	NoPath           bool
 	NoTimestamp      bool
+	MaxBytes         int
 
 	ileinfo  *os.FileInfo
 	fileinfo *os.FileInfo

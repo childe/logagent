@@ -41,6 +41,7 @@ type FileConfig struct {
 	FieldNames                    []string          `json:"fieldnames"`
 	ExactMatch                    bool
 	Delimiter                     string
+	MaxBytes                      int
 	DelimiterRegexp               *regexp.Regexp
 	QuoteChar                     string
 	DeadTime                      string
@@ -161,6 +162,10 @@ func LoadConfig(path string) (config Config, err error) {
 			config.Files[k].DeadTime = defaultConfig.fileDeadtime
 		}
 		config.Files[k].deadtime, err = time.ParseDuration(config.Files[k].DeadTime)
+
+		if config.Files[k].MaxBytes == 0 {
+			config.Files[k].MaxBytes = 1024 * 1024
+		}
 
 		if config.Files[k].Multiline != nil {
 			config.Files[k].Multiline.MatchRegexp, err = regexp.Compile(config.Files[k].Multiline.Match)
