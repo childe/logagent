@@ -61,7 +61,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 	var shouldReturn = false
 	var shouldMultiline = false
 	for {
-		text, bytesread, err := h.readline(reader, buffer, read_timeout)
+		text, bytesread, err := h.readline(reader, buffer, read_timeout, h.FileConfig.MaxBytes)
 		h.mergedBytesread += bytesread
 
 		if err != nil {
@@ -198,7 +198,7 @@ func (h *Harvester) open() *os.File {
 	return h.file
 }
 
-func (h *Harvester) readline(reader *bufio.Reader, buffer *bytes.Buffer, eof_timeout time.Duration) (*string, int, error) {
+func (h *Harvester) readline(reader *bufio.Reader, buffer *bytes.Buffer, eof_timeout time.Duration, maxBytes int) (*string, int, error) {
 	var is_partial bool = true
 	var newline_length int = 1
 	start_time := time.Now()
@@ -219,6 +219,15 @@ func (h *Harvester) readline(reader *bufio.Reader, buffer *bytes.Buffer, eof_tim
 
 			// TODO(sissel): if buffer exceeds a certain length, maybe report an error condition? chop it?
 			buffer.Write(segment)
+		}
+
+		if buffer.Len() > maxBytes {
+			bufferSize := buffer.Len()
+			str := new(string)
+			*str = buffer.String()
+			// Reset the buffer for the next line
+			buffer.Reset()
+			return str, bufferSize, nil
 		}
 
 		if err != nil {
@@ -277,6 +286,7 @@ func (h *Harvester) sendEvent(multilineBuf []string, multilineBufIndex int,
 		NoHostname:       h.FileConfig.NoHostname,
 		NoTimestamp:      h.FileConfig.NoTimestamp,
 		NoPath:           h.FileConfig.NoPath,
+		MaxBytes:         h.FileConfig.MaxBytes,
 		Hostname:         &h.FileConfig.Hostname,
 		Source:           &h.Path,
 		Offset:           h.Offset,

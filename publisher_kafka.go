@@ -172,6 +172,10 @@ func PublishKafka(input chan []*FileEvent,
 			log.Println("no producer, events cnt: ", len(events))
 		} else {
 			for _, event := range events {
+				// skip too long text
+				if len(*event.Text) > event.MaxBytes {
+					continue
+				}
 				msg := JsonFormat(event)
 
 				entry := &iisLogEntry{
