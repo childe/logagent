@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"runtime/pprof"
 	"time"
@@ -27,6 +29,8 @@ var options = &struct {
 	useSyslog           bool
 	tailOnRotate        bool
 	quiet               bool
+	pprof               bool
+	pprofAddr           string
 	version             bool
 }{
 	spoolSize:           1024,
@@ -44,6 +48,7 @@ func emitOptions() {
 	emit("\ttail (on-rotation):  %t\n", options.tailOnRotate)
 	emit("\tlog-to-syslog:          %t\n", options.useSyslog)
 	emit("\tquiet:             %t\n", options.quiet)
+	emit("\tpprof:             %t\n", options.pprof)
 	if runProfiler() {
 		emit("\t--- profile run ---\n")
 		emit("\tcpu-profile-file:    %s\n", options.cpuProfileFile)
@@ -78,7 +83,11 @@ func init() {
 	flag.BoolVar(&options.tailOnRotate, "t", options.tailOnRotate, "always tail on log rotation -note: may skip entries ")
 
 	flag.BoolVar(&options.quiet, "quiet", options.quiet, "operate in quiet mode - only emit errors to log")
+	flag.BoolVar(&options.pprof, "pprof", false, "if pprof")
+	flag.StringVar(&options.pprofAddr, "pprof-address", "127.0.0.1:8899", "default: 127.0.0.1:8899")
 	flag.BoolVar(&options.version, "version", options.version, "output the version of this program")
+
+	flag.Parse()
 }
 
 func init() {
@@ -86,6 +95,11 @@ func init() {
 }
 
 func main() {
+	if options.pprof {
+		go func() {
+			http.ListenAndServe(options.pprofAddr, nil)
+		}()
+	}
 	defer func() {
 		p := recover()
 		if p == nil {
@@ -93,8 +107,6 @@ func main() {
 		}
 		fault("recovered panic: %v", p)
 	}()
-
-	flag.Parse()
 
 	if options.version {
 		fmt.Println(Version)
