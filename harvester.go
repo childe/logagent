@@ -139,6 +139,7 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 					NoTimestamp:      h.FileConfig.NoTimestamp,
 					NoPath:           h.FileConfig.NoPath,
 					Hostname:         &h.FileConfig.Hostname,
+					MaxBytes:         h.FileConfig.MaxBytes,
 					Source:           &h.Path,
 					Offset:           h.Offset,
 					Line:             line,
