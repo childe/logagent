@@ -84,8 +84,9 @@ func (h *Harvester) Harvest(output chan *FileEvent) {
 				emit("Unexpected state reading from %s; error: %s\n", h.Path, err)
 				shouldReturn = true
 			}
+		} else {
+			last_read_time = time.Now()
 		}
-		last_read_time = time.Now()
 
 		if h.FileConfig.Multiline != nil && (shouldReturn || shouldMultiline) {
 			h.sendEvent(multilineBuf, multilineBufIndex, output, &info, line)
