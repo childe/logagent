@@ -155,6 +155,7 @@ func JsonFormat2(event *FileEvent) string {
 			e.string(*event.Text)
 			e.WriteByte('"')
 			if event.ExactMatch == false && len(splited) > event.FieldNamesLength {
+				e.WriteByte(',')
 				for idx, fieldname := range event.FieldNames {
 					if idx > 0 && fieldname == event.FieldNames[idx-1] {
 						e.string(" " + strings.Trim(splited[idx], event.QuoteChar))
